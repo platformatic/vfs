@@ -302,5 +302,14 @@ export class RealFSProvider extends VirtualProvider {
   get supportsSymlinks(): boolean;
 }
 
+export class SqliteProvider extends VirtualProvider {
+  constructor(pathOrMemory?: string);
+  get readonly(): boolean;
+  get supportsWatch(): boolean;
+  get supportsSymlinks(): boolean;
+  setReadOnly(): void;
+  close(): void;
+}
+
 export function create(options?: VFSOptions): VirtualFileSystem;
 export function create(provider: VirtualProvider, options?: VFSOptions): VirtualFileSystem;

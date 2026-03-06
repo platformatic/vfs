@@ -5,6 +5,7 @@ import {
   VirtualProvider,
   MemoryProvider,
   RealFSProvider,
+  SqliteProvider,
   VirtualStats,
   VirtualDirent,
   VirtualReadStream,
@@ -159,6 +160,27 @@ test('RealFSProvider is a VirtualProvider', () => {
 test('RealFSProvider has rootPath getter', () => {
   const provider = new RealFSProvider('/tmp');
   expect(provider.rootPath).type.toBe<string>();
+});
+
+// SqliteProvider constructor
+test('SqliteProvider constructor takes optional path', () => {
+  expect(new SqliteProvider()).type.toBe<SqliteProvider>();
+  expect(new SqliteProvider(':memory:')).type.toBe<SqliteProvider>();
+});
+
+test('SqliteProvider is a VirtualProvider', () => {
+  expect(new SqliteProvider()).type.toBeAssignableTo<VirtualProvider>();
+});
+
+test('SqliteProvider has setReadOnly and close methods', () => {
+  const provider = new SqliteProvider();
+  expect(provider.setReadOnly()).type.toBe<void>();
+  expect(provider.close()).type.toBe<void>();
+});
+
+test('SqliteProvider can be passed to create', () => {
+  expect(create(new SqliteProvider())).type.toBe<VirtualFileSystem>();
+  expect(create(new SqliteProvider(), { moduleHooks: false })).type.toBe<VirtualFileSystem>();
 });
 
 // Properties

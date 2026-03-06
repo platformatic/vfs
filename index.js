@@ -4,6 +4,7 @@ const { VirtualFileSystem } = require('./lib/file_system.js');
 const { VirtualProvider } = require('./lib/provider.js');
 const { MemoryProvider } = require('./lib/providers/memory.js');
 const { RealFSProvider } = require('./lib/providers/real.js');
+const { SqliteProvider } = require('./lib/providers/sqlite.js');
 
 /**
  * Creates a new VirtualFileSystem instance.
@@ -30,4 +31,5 @@ module.exports = {
   VirtualProvider,
   MemoryProvider,
   RealFSProvider,
+  SqliteProvider,
 };
