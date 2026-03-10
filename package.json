@@ -1,6 +1,6 @@
 {
   "name": "@platformatic/vfs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Virtual File System for Node.js - userland shim for node:vfs",
   "main": "index.js",
   "types": "index.d.ts",
