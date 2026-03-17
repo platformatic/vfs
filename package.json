@@ -1,6 +1,6 @@
 {
   "name": "@platformatic/vfs",
-  "version": "0.2.0",
+  "version": "0.3.0-alpha.1",
   "description": "Virtual File System for Node.js - userland shim for node:vfs",
   "homepage": "https://github.com/platformatic/vfs",
   "author": "Platformatic Inc. <oss@platformatic.dev> (https://platformatic.dev)",
