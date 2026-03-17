@@ -2,15 +2,12 @@
   "name": "@platformatic/vfs",
   "version": "0.2.0",
   "description": "Virtual File System for Node.js - userland shim for node:vfs",
-  "main": "index.js",
-  "types": "index.d.ts",
-  "exports": {
-    ".": "./index.js"
-  },
-  "scripts": {
-    "lint": "eslint .",
-    "test": "node --test test/*.js",
-    "test:types": "tstyche"
+  "homepage": "https://github.com/platformatic/vfs",
+  "author": "Platformatic Inc. <oss@platformatic.dev> (https://platformatic.dev)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/platformatic/vfs.git"
   },
   "keywords": [
     "vfs",
@@ -19,26 +16,42 @@
     "fs",
     "mount"
   ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/platformatic/vfs.git"
+  "bugs": {
+    "url": "https://github.com/platformatic/vfs/issues"
   },
-  "engines": {
-    "node": ">= 22"
-  },
+  "private": false,
   "files": [
     "index.js",
     "index.d.ts",
     "lib/**/*.js",
-    "LICENSE"
+    "LICENSE",
+    "README.md"
   ],
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": "./index.js",
+  "scripts": {
+    "lint": "eslint --cache",
+    "typecheck": "tsc -p . --noEmit",
+    "test": "c8 -c test/config/c8.json node  --test --test-reporter=cleaner-spec-reporter --test-timeout=60000 'test/*.test.js'",
+    "test:types": "tstyche",
+    "ci": "npm run lint && npm run test:types && npm run test",
+    "prepublishOnly": "npm run lint",
+    "postpublish": "git push origin && git push origin -f --tags"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@stylistic/eslint-plugin-js": "^4.4.1",
     "@types/node": "^25.3.2",
+    "@types/semver": "^7.7.1",
+    "c8": "^10.1.3",
+    "cleaner-spec-reporter": "^1.0.3",
     "eslint": "^10.0.2",
+    "semver": "^7.7.4",
     "tstyche": "^3.5.0",
     "typescript": "^5.8.2"
+  },
+  "engines": {
+    "node": ">= 22"
   }
 }
