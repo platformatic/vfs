@@ -134,6 +134,89 @@ describe('Module hooks — fs.access callback', () => {
   });
 });
 
+describe('Module hooks — fs callback patches', () => {
+  let vfs;
+
+  afterEach(() => {
+    if (vfs?.mounted) {
+      vfs.unmount();
+    }
+  });
+
+  it('fs.stat calls back with stats for VFS files', (_, done) => {
+    vfs = create();
+    vfs.writeFileSync('/cb-stat.txt', 'data');
+    vfs.mount('/vfs-test-cb-stat');
+
+    fs.stat('/vfs-test-cb-stat/cb-stat.txt', (err, stats) => {
+      assert.ifError(err);
+      assert.ok(stats.isFile());
+      done();
+    });
+  });
+
+  it('fs.stat calls back with ENOENT for missing VFS files', (_, done) => {
+    vfs = create();
+    vfs.mount('/vfs-test-cb-stat-miss');
+
+    fs.stat('/vfs-test-cb-stat-miss/nope.txt', (err) => {
+      assert.ok(err);
+      assert.strictEqual(err.code, 'ENOENT');
+      done();
+    });
+  });
+
+  it('fs.lstat calls back with stats for VFS files', (_, done) => {
+    vfs = create();
+    vfs.writeFileSync('/cb-lstat.txt', 'data');
+    vfs.mount('/vfs-test-cb-lstat');
+
+    fs.lstat('/vfs-test-cb-lstat/cb-lstat.txt', (err, stats) => {
+      assert.ifError(err);
+      assert.ok(stats.isFile());
+      done();
+    });
+  });
+
+  it('fs.readFile calls back with VFS content', (_, done) => {
+    vfs = create();
+    vfs.writeFileSync('/cb-read.txt', 'callback content');
+    vfs.mount('/vfs-test-cb-readfile');
+
+    fs.readFile('/vfs-test-cb-readfile/cb-read.txt', 'utf8', (err, content) => {
+      assert.ifError(err);
+      assert.strictEqual(content, 'callback content');
+      done();
+    });
+  });
+
+  it('fs.readFile calls back with ENOENT for missing VFS files', (_, done) => {
+    vfs = create();
+    vfs.mount('/vfs-test-cb-readfile-miss');
+
+    fs.readFile('/vfs-test-cb-readfile-miss/nope.txt', 'utf8', (err) => {
+      assert.ok(err);
+      assert.strictEqual(err.code, 'ENOENT');
+      done();
+    });
+  });
+
+  it('fs.createReadStream returns a readable stream for VFS files', (_, done) => {
+    vfs = create();
+    vfs.writeFileSync('/stream.txt', 'streamed data');
+    vfs.mount('/vfs-test-cb-stream');
+
+    const chunks = [];
+    const stream = fs.createReadStream('/vfs-test-cb-stream/stream.txt');
+    stream.on('data', (chunk) => chunks.push(chunk));
+    stream.on('end', () => {
+      assert.strictEqual(Buffer.concat(chunks).toString(), 'streamed data');
+      done();
+    });
+    stream.on('error', done);
+  });
+});
+
 describe('Module hooks — fs.promises patches', () => {
   let vfs;
 
