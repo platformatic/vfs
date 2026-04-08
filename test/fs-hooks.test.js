@@ -201,6 +201,44 @@ describe('Module hooks — fs callback patches', () => {
     });
   });
 
+  it('fs.readdir calls back with VFS directory entries', (_, done) => {
+    vfs = create();
+    vfs.writeFileSync('/cbdir/a.txt', 'a');
+    vfs.writeFileSync('/cbdir/b.txt', 'b');
+    vfs.mount('/vfs-test-cb-readdir');
+
+    fs.readdir('/vfs-test-cb-readdir/cbdir', (err, entries) => {
+      assert.ifError(err);
+      assert.deepStrictEqual(entries.sort(), ['a.txt', 'b.txt']);
+      done();
+    });
+  });
+
+  it('fs.readlink calls back with VFS symlink target', (_, done) => {
+    vfs = create();
+    vfs.writeFileSync('/cb-link-target.txt', 'data');
+    vfs.symlinkSync('/cb-link-target.txt', '/cb-link.txt');
+    vfs.mount('/vfs-test-cb-readlink');
+
+    fs.readlink('/vfs-test-cb-readlink/cb-link.txt', (err, target) => {
+      assert.ifError(err);
+      assert.strictEqual(target, '/vfs-test-cb-readlink/cb-link-target.txt');
+      done();
+    });
+  });
+
+  it('fs.realpath calls back with resolved VFS path', (_, done) => {
+    vfs = create();
+    vfs.writeFileSync('/cb-real.txt', 'data');
+    vfs.mount('/vfs-test-cb-realpath');
+
+    fs.realpath('/vfs-test-cb-realpath/cb-real.txt', (err, resolved) => {
+      assert.ifError(err);
+      assert.strictEqual(resolved, '/vfs-test-cb-realpath/cb-real.txt');
+      done();
+    });
+  });
+
   it('fs.createReadStream returns a readable stream for VFS files', (_, done) => {
     vfs = create();
     vfs.writeFileSync('/stream.txt', 'streamed data');
