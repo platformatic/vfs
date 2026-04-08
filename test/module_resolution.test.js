@@ -381,6 +381,25 @@ describe('Module resolution — package #imports', () => {
     });
   });
 
+  it('#import with nested condition objects', () => {
+    withVFS({
+      '/node_modules/vfs-hash-nested-cond/package.json': JSON.stringify({
+        name: 'vfs-hash-nested-cond',
+        imports: {
+          '#util': { node: { require: './cjs-util.js', import: './esm-util.js' } },
+        },
+        main: './index.js',
+      }),
+      '/node_modules/vfs-hash-nested-cond/cjs-util.js':
+        'module.exports = "nested-cjs-util";',
+      '/node_modules/vfs-hash-nested-cond/index.js':
+        'module.exports = require("#util");',
+    }, () => {
+      const mod = require('vfs-hash-nested-cond');
+      assert.strictEqual(mod, 'nested-cjs-util');
+    });
+  });
+
   it('#import from nested file walks up to find package.json', () => {
     withVFS({
       '/node_modules/vfs-hash-nested/package.json': JSON.stringify({
