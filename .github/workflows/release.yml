@@ -46,8 +46,6 @@ jobs:
           GITHUB_ACTIONS: "true"
       - name: Push changes
         run: git push origin HEAD:${{ github.ref }}
-      - name: Update npm
-        run: npm install -g npm@latest
       - name: Publish to NPM
         run: pnpm publish --access public --tag ${{ inputs.prerelease == true && 'next' || 'latest' }} --publish-branch ${{ github.ref_name }} --no-git-checks
       - name: "Create release notes"
