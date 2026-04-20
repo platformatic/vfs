@@ -75,6 +75,20 @@ describe('RealFSProvider', () => {
     assert.strictEqual(content, 'Hello World');
   });
 
+  it('handles paths that already include the root path', () => {
+    vfs.writeFileSync('/test.txt', 'content');
+
+    // Read using a path that includes the rootPath (simulates cwd resolution)
+    const content = vfs.readFileSync(rootPath + '/test.txt', 'utf8');
+    assert.strictEqual(content, 'content');
+  });
+
+  it('write and read with rootPath-prefixed path', () => {
+    vfs.writeFileSync(rootPath + '/prefixed.txt', 'hello');
+    const content = vfs.readFileSync('/prefixed.txt', 'utf8');
+    assert.strictEqual(content, 'hello');
+  });
+
   it('data persists across provider instances', () => {
     vfs.mkdirSync('/session', { recursive: true });
     vfs.writeFileSync('/session/data.txt', 'persistent');
