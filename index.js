@@ -4,7 +4,6 @@ const { VirtualFileSystem } = require('./lib/file_system.js');
 const { VirtualProvider } = require('./lib/provider.js');
 const { MemoryProvider } = require('./lib/providers/memory.js');
 const { RealFSProvider } = require('./lib/providers/real.js');
-const { SqliteProvider } = require('./lib/providers/sqlite.js');
 
 /**
  * Creates a new VirtualFileSystem instance.
@@ -31,5 +30,21 @@ module.exports = {
   VirtualProvider,
   MemoryProvider,
   RealFSProvider,
-  SqliteProvider,
 };
+
+// Lazy-load SqliteProvider so that `node:sqlite` (and its ExperimentalWarning)
+// is only required when a consumer actually reads `vfs.SqliteProvider`.
+Object.defineProperty(module.exports, 'SqliteProvider', {
+  enumerable: true,
+  configurable: true,
+  get() {
+    const { SqliteProvider } = require('./lib/providers/sqlite.js');
+    Object.defineProperty(module.exports, 'SqliteProvider', {
+      value: SqliteProvider,
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
+    return SqliteProvider;
+  },
+});
