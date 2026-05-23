@@ -31,7 +31,7 @@ importers:
         version: 10.4.0
       semver:
         specifier: ^7.7.4
-        version: 7.8.0
+        version: 7.8.1
       tstyche:
         specifier: ^3.5.0
         version: 3.5.0(typescript@5.9.3)
@@ -474,8 +474,8 @@ packages:
     resolution: {integrity: sha512-fGxEI7+wsG9xrvdjsrlmL22OMTTiHRwAMroiEeMgq8gzoLC/PQr7RsRDSTLUg/bZAZtF+TVIkHc6/4RIKrui+Q==}
     engines: {node: '>=0.10.0'}
 
-  semver@7.8.0:
-    resolution: {integrity: sha512-AcM7dV/5ul4EekoQ29Agm5vri8JNqRyj39o0qpX6vDF2GZrtutZl5RwgD1XnZjiTAfncsJhMI48QQH3sN87YNA==}
+  semver@7.8.1:
+    resolution: {integrity: sha512-rkVq3IXh+4FDGch+KwzX3aV9W3kO54GyEgpvBzSyctDA6Xtd7RJQV1xmXbeQp5v7+VzLOfVqiutSE6GICgPFvg==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -935,7 +935,7 @@ snapshots:
 
   make-dir@4.0.0:
     dependencies:
-      semver: 7.8.0
+      semver: 7.8.1
 
   minimatch@10.2.5:
     dependencies:
@@ -985,7 +985,7 @@ snapshots:
 
   require-directory@2.1.1: {}
 
-  semver@7.8.0: {}
+  semver@7.8.1: {}
 
   shebang-command@2.0.0:
     dependencies:
