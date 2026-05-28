@@ -107,7 +107,9 @@ export class VFSWatchAsyncIterable implements AsyncIterable<WatchAsyncEvent> {
 }
 
 export class VFSStatWatcher extends EventEmitter {
+  // @ts-expect-error Implementation overrides the method
   addListener(listener: (curr: VirtualStats, prev: VirtualStats) => void): void;
+  // @ts-expect-error Implementation overrides the method
   removeListener(listener: (curr: VirtualStats, prev: VirtualStats) => void): boolean;
   hasNoListeners(): boolean;
   stop(): void;

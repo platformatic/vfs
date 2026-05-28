@@ -1,12 +1,12 @@
 {
   "compilerOptions": {
     "strict": true,
-    "module": "commonjs",
+    "module": "node16",
     "target": "es2022",
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "declaration": true,
     "esModuleInterop": true,
-    "baseUrl": ".",
+    "types": ["node"],
     "paths": {
       "@platformatic/vfs": ["."]
     }
