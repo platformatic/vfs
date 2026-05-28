@@ -88,7 +88,7 @@ export class VirtualReadStream extends Readable {
   get path(): string;
 }
 
-export class VFSWatcher extends EventEmitter {
+export interface VFSWatcher extends EventEmitter {
   close(): void;
   unref(): this;
   ref(): this;
@@ -99,14 +99,14 @@ export interface WatchAsyncEvent {
   filename: string;
 }
 
-export class VFSWatchAsyncIterable implements AsyncIterable<WatchAsyncEvent> {
+export interface VFSWatchAsyncIterable extends AsyncIterable<WatchAsyncEvent> {
   [Symbol.asyncIterator](): AsyncIterator<WatchAsyncEvent>;
   next(): Promise<IteratorResult<WatchAsyncEvent>>;
   return(): Promise<IteratorResult<WatchAsyncEvent>>;
   throw(error?: unknown): Promise<IteratorResult<WatchAsyncEvent>>;
 }
 
-export class VFSStatWatcher extends EventEmitter {
+export interface VFSStatWatcher extends Omit<EventEmitter, 'addListener' | 'removeListener'> {
   addListener(listener: (curr: VirtualStats, prev: VirtualStats) => void): void;
   removeListener(listener: (curr: VirtualStats, prev: VirtualStats) => void): boolean;
   hasNoListeners(): boolean;
