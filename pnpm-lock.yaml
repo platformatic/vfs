@@ -33,8 +33,8 @@ importers:
         specifier: ^7.7.4
         version: 7.8.5
       tstyche:
-        specifier: ^3.5.0
-        version: 3.5.0(typescript@5.9.3)
+        specifier: ^7.0.0
+        version: 7.2.2(typescript@5.9.3)
       typescript:
         specifier: ^5.8.2
         version: 5.9.3
@@ -515,12 +515,12 @@ packages:
     resolution: {integrity: sha512-u9E6A+ZDYdp7a4WnarkXPZOx8Ilz46+kby6p1yZ8zsGTz9gYa6FIS7lj2oezzNKmtdyyJNNmmXDppga5GB7kSw==}
     engines: {node: '>=18'}
 
-  tstyche@3.5.0:
-    resolution: {integrity: sha512-N4SUp/ZWaMGEcglpVFIzKez0GQEiBdfFDgcnqwv9O1mePZgos8N1cZCzNgGtPGo/w0ym04MjJcDnsw1sorEzgA==}
-    engines: {node: '>=18.19'}
+  tstyche@7.2.2:
+    resolution: {integrity: sha512-pd0CZjwjzxCzRiBAH/SEx4IaMS6ti/KA8cWc22Bx1Wa5FF30JeFQa/zAfXpjWkrJNmFqaOJrTaZDF+ji3P2TmA==}
+    engines: {node: '>=22'}
     hasBin: true
     peerDependencies:
-      typescript: 4.x || 5.x
+      typescript: '>=5.4'
     peerDependenciesMeta:
       typescript:
         optional: true
@@ -1027,7 +1027,7 @@ snapshots:
       glob: 10.5.0
       minimatch: 10.2.5
 
-  tstyche@3.5.0(typescript@5.9.3):
+  tstyche@7.2.2(typescript@5.9.3):
     optionalDependencies:
       typescript: 5.9.3
 
