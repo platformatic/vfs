@@ -48,7 +48,7 @@
     "cleaner-spec-reporter": "^1.0.3",
     "eslint": "^10.0.2",
     "semver": "^7.7.4",
-    "tstyche": "^3.5.0",
+    "tstyche": "^7.0.0",
     "typescript": "^5.8.2"
   },
   "engines": {
