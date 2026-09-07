@@ -1,6 +1,6 @@
 #!/usr/bin/env -S node
 
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { readFile, writeFile } from 'node:fs/promises'
 import { inc, type ReleaseType } from 'semver'
 
@@ -47,8 +47,8 @@ const version = await getVersion()
 await updatePackageJson(version)
 
 if (process.env.GITHUB_ACTIONS === 'true') {
-  execSync(`git config --global user.name "${userInfo[0]}"`)
-  execSync(`git config --global user.email "${userInfo[1]}"`)
+  execFileSync('git', ['config', '--global', 'user.name', userInfo[0]])
+  execFileSync('git', ['config', '--global', 'user.email', userInfo[1]])
 }
 
-execSync(`git commit -a -m "chore: Bumped v${version}." -m "Signed-off-by: ${userInfo[0]} <${userInfo[1]}>"`)
+execFileSync('git', ['commit', '-a', '-m', `chore: Bumped v${version}.`, '-m', `Signed-off-by: ${userInfo[0]} <${userInfo[1]}>`])
