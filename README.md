@@ -60,7 +60,7 @@ vfs.mount('/prefix');   // Start intercepting paths under /prefix
 vfs.unmount();          // Stop intercepting
 ```
 
-`mount()` returns the VFS instance for chaining. When mounted with `moduleHooks: true` (the default), `require()`, `import`, and core `fs` functions (`readFileSync`, `statSync`, `existsSync`, `readdirSync`, `realpathSync`, `watch`, etc.) are patched to serve files from the VFS.
+`mount()` returns the VFS instance for chaining. When mounted with `moduleHooks: true` (the default), `require()`, `import`, and core `fs` functions (`readFileSync`, `statSync`, `existsSync`, `readdirSync`, `realpathSync`, `openSync`, `watch`, etc.) are patched to serve files from the VFS.
 
 Emits `vfs-mount` and `vfs-unmount` events on `process`.
 
@@ -252,7 +252,7 @@ Higher-level operations (`readFile`, `writeFile`, `copyFile`, `exists`, `access`
 When `moduleHooks` is enabled (the default), mounting a VFS instance:
 
 1. **Patches `require()` and `import`** — On Node.js 23.5+ uses `Module.registerHooks()`. On older versions falls back to `Module._resolveFilename` + `Module._extensions` patching.
-2. **Patches core `fs` functions** — `readFileSync`, `statSync`, `lstatSync`, `readdirSync`, `existsSync`, `realpathSync`, `watch`, `watchFile`, `unwatchFile`.
+2. **Patches core `fs` functions** — `readFileSync`, `statSync`, `lstatSync`, `readdirSync`, `existsSync`, `realpathSync`, `watch`, `watchFile`, `unwatchFile`, and the descriptor family `openSync`/`open`, `readSync`/`read`, `closeSync`/`close`, `fstatSync`/`fstat`.
 
 This means third-party code using `require()` or `fs.readFileSync()` will transparently pick up files from the VFS.
 
