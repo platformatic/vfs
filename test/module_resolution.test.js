@@ -15,16 +15,10 @@ function withVFS(files, fn) {
     }
     vfs.writeFileSync(path, content);
   }
-  vfs.mount('/');
+  const mountPoint = vfs.mount();
   try {
-    fn(vfs);
+    fn(mountPoint);
   } finally {
-    // Clean up require cache for all VFS paths
-    for (const key of Object.keys(require.cache)) {
-      if (key.startsWith('/node_modules/') || key.startsWith('/app/')) {
-        delete require.cache[key];
-      }
-    }
     vfs.unmount();
     provider.close();
   }
@@ -71,8 +65,8 @@ describe('Module resolution — file-before-directory', () => {
         'module.exports = require("./schema");',
       '/app/package.json':
         '{"name":"app","main":"entry.js"}',
-    }, () => {
-      const result = require('/app/entry.js');
+    }, (mountPoint) => {
+      const result = require(`${mountPoint}/app/entry.js`);
       assert.strictEqual(result, 'file',
                          'file.js should take precedence over directory/index.js');
     });
@@ -86,9 +80,9 @@ describe('Module resolution — require.resolve() interception', () => {
         'module.exports = 42;',
       '/node_modules/vfs-resolve-test/package.json':
         '{"name":"vfs-resolve-test","main":"index.js"}',
-    }, () => {
+    }, (mountPoint) => {
       const resolved = require.resolve('vfs-resolve-test');
-      assert.strictEqual(resolved, '/node_modules/vfs-resolve-test/index.js');
+      assert.strictEqual(resolved, `${mountPoint}/node_modules/vfs-resolve-test/index.js`);
     });
   });
 });

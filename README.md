@@ -19,11 +19,9 @@ const vfs = create();
 
 vfs.writeFileSync('/app/index.js', 'module.exports = "hello"');
 
-// Mount the VFS at /app — patches require() and fs so that
-// the rest of the process sees virtual files transparently.
-vfs.mount('/app');
-
-const mod = require('/app/index.js'); // 'hello'
+// Mount in an isolated namespace; the returned path is platform-dependent.
+const mountPoint = vfs.mount();
+const mod = require(`${mountPoint}/app/index.js`); // 'hello'
 
 vfs.unmount();
 ```
@@ -48,7 +46,7 @@ Returns a `VirtualFileSystem`.
 | Property | Type | Description |
 |---|---|---|
 | `provider` | `VirtualProvider` | The underlying storage provider |
-| `mountPoint` | `string \| null` | Current mount prefix, or `null` |
+| `mountPoint` | `string \| null` | Current isolated mount path, or `null` |
 | `mounted` | `boolean` | Whether the VFS is currently mounted |
 | `readonly` | `boolean` | Whether the provider is read-only |
 | `overlay` | `boolean` | Whether overlay mode is enabled |
@@ -56,11 +54,12 @@ Returns a `VirtualFileSystem`.
 #### Mount / Unmount
 
 ```js
-vfs.mount('/prefix');   // Start intercepting paths under /prefix
-vfs.unmount();          // Stop intercepting
+const mountPoint = vfs.mount(); // e.g. '/dev/null/vfs/0' (platform-dependent)
+vfs.mountPointURL;             // file: URL for import()
+vfs.unmount();                 // Stop intercepting
 ```
 
-`mount()` returns the VFS instance for chaining. When mounted with `moduleHooks: true` (the default), `require()`, `import`, and core `fs` functions (`readFileSync`, `statSync`, `existsSync`, `readdirSync`, `realpathSync`, `openSync`, `watch`, etc.) are patched to serve files from the VFS.
+`mount()` returns a unique mount point inside `os.devNull/vfs/` (matching Node.js core's namespace). It takes no arguments; passing a prefix throws a `TypeError`. The mount point avoids shadowing real paths and can be addressed through `mountPointURL`. When mounted with `moduleHooks: true` (the default), this package patches selected `require()`, `import`, `fs`, and `fs.promises` entry points; see the limitations below.
 
 Emits `vfs-mount` and `vfs-unmount` events on `process`.
 
@@ -72,7 +71,7 @@ Returns `true` if the given path would be handled by this VFS instance. In overl
 
 #### Sync API
 
-The full synchronous `fs` API:
+The synchronous VFS API includes:
 
 ```js
 vfs.writeFileSync(path, data[, options])
@@ -91,6 +90,10 @@ vfs.accessSync(path[, mode])
 vfs.realpathSync(path[, options])
 vfs.symlinkSync(target, path[, type])
 vfs.readlinkSync(path[, options])
+vfs.rmSync(path[, options])              // { recursive, force }
+vfs.truncateSync(path[, len])
+vfs.ftruncateSync(fd[, len])
+vfs.mkdtempSync(prefix)
 ```
 
 #### File descriptors
@@ -104,7 +107,7 @@ vfs.closeSync(fd);
 
 #### Callback API
 
-Every sync method has a callback counterpart following the standard Node.js `(err, result)` convention:
+Some sync methods have callback counterparts following the standard Node.js `(err, result)` convention:
 
 ```js
 vfs.readFile(path, options, callback)
@@ -132,6 +135,9 @@ const target = await vfs.promises.readlink('/link');
 await vfs.promises.lstat('/link');
 await vfs.promises.realpath('/link');
 await vfs.promises.rmdir('/dir');
+await vfs.promises.rm('/tree', { recursive: true });
+await vfs.promises.truncate('/file.txt', 0);
+const tmp = await vfs.promises.mkdtemp('/tmp-');
 ```
 
 #### Streams
@@ -157,10 +163,10 @@ When created with `{ virtualCwd: true }`:
 ```js
 const vfs = create({ virtualCwd: true });
 vfs.writeFileSync('/app/file.txt', 'data');
-vfs.mount('/app');
+const mountPoint = vfs.mount();
 
-vfs.chdir('/app');
-vfs.cwd(); // '/app'
+vfs.chdir(`${mountPoint}/app`);
+vfs.cwd(); // `${mountPoint}/app`
 ```
 
 When mounted, `process.cwd()` and `process.chdir()` are patched to work with the virtual directory.
@@ -252,15 +258,23 @@ Higher-level operations (`readFile`, `writeFile`, `copyFile`, `exists`, `access`
 When `moduleHooks` is enabled (the default), mounting a VFS instance:
 
 1. **Patches `require()` and `import`** — On Node.js 23.5+ uses `Module.registerHooks()`. On older versions falls back to `Module._resolveFilename` + `Module._extensions` patching.
-2. **Patches core `fs` functions** — `readFileSync`, `statSync`, `lstatSync`, `readdirSync`, `existsSync`, `realpathSync`, `watch`, `watchFile`, `unwatchFile`, and the descriptor family `openSync`/`open`, `readSync`/`read`, `closeSync`/`close`, `fstatSync`/`fstat`.
+2. **Patches selected `fs` functions** — path-based reads, writes, directory mutation, `rm`, `truncate`, `mkdtemp`, `rename`, `copyFile`, symlinks and watchers, plus the sync/callback descriptor family `open`, `read`, `close`, and `fstat`. Cross-mount rename/copy returns `EXDEV`.
 
-This means third-party code using `require()` or `fs.readFileSync()` will transparently pick up files from the VFS.
+This covers calls made through patched `fs` properties, not every way Node.js or an addon can access the filesystem.
 
 Module resolution supports package.json `exports`, `main`, and bare specifier resolution walking `node_modules`.
 
-## Node.js core VFS support
+## Differences from Node.js core VFS
 
-This package is a direct extraction of the Virtual File System being added to Node.js core ([nodejs/node#61478](https://github.com/nodejs/node/pull/61478)), allowing it to be used on Node.js 22+. Once the core PR lands, this package will no longer be necessary (except for `SqliteProvider`).
+This is a **userland compatibility layer**, not a direct extraction of the current `node:vfs` implementation (experimental in Node.js 26). It tracks the mount namespace and some of the `fs` API, but monkey-patching cannot intercept Node's native filesystem binding, built-in loader internals, or references to `fs` methods captured before mounting. In particular:
+
+- Core's full `fs`/`fs.promises` surface is **not provided**: descriptor writes (`fs.write`), `fs.promises.open`/`FileHandle`, write streams, `opendir`, `openAsBlob`, `link`, permission/ownership/time operations, and startup flags (`--vfs-mount`, `--vfs-load`) remain unsupported by the mounted shim. Direct VFS methods are independent of the patched `fs` surface.
+- Native addon and FFI library loading from virtual bytes, SEA integration, and transparent interception of Node's internal module-resolution filesystem calls require Node core and are **not supported**. Core's `ZipProvider` and automatic ZIP loading are also **not included**; this package ships memory, real-filesystem, and SQLite providers. The userland resolver approximates CJS/ESM resolution; package edge cases can differ.
+- Core invalidates both CJS and ESM module caches on unmount. This shim evicts its CJS cache entries, but cannot invalidate ESM's internal cache. Re-mounting assigns a new URL, avoiding a stale ESM cache entry.
+- Overlay and virtual-cwd options are shim-only and can interact with other monkey patches. Overlay mode routes missing paths to disk, including creates; disable it when isolation matters.
+- `fs` path dispatch is synchronous under the hood even for callback and promise methods. Direct provider async methods are separate; this shim does not provide core's libuv-backed concurrency guarantees. Recursive `readdir` is implemented for the memory provider without following directory symlinks; other providers may not implement it.
+
+Use built-in `node:vfs` when running a Node version that provides it. The shim remains useful for Node 22+ and for `SqliteProvider`.
 
 ## License
 

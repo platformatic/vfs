@@ -4,6 +4,7 @@ const { describe, it, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
+const path = require('node:path');
 const { create } = require('../index.js');
 
 // These tests verify that the module hooks patch real fs/fs.promises methods
@@ -22,36 +23,36 @@ describe('Module hooks — fs sync patches', () => {
   it('fs.readFileSync reads from VFS', () => {
     vfs = create();
     vfs.writeFileSync('/data.txt', 'hello from vfs');
-    vfs.mount('/vfs-test-sync-read');
+    vfs.mount();
 
-    const content = fs.readFileSync('/vfs-test-sync-read/data.txt', 'utf8');
+    const content = fs.readFileSync(path.join(vfs.mountPoint, 'data.txt'), 'utf8');
     assert.strictEqual(content, 'hello from vfs');
   });
 
   it('fs.existsSync returns true for VFS files', () => {
     vfs = create();
     vfs.writeFileSync('/exists.txt', 'yes');
-    vfs.mount('/vfs-test-sync-exists');
+    vfs.mount();
 
-    assert.strictEqual(fs.existsSync('/vfs-test-sync-exists/exists.txt'), true);
-    assert.strictEqual(fs.existsSync('/vfs-test-sync-exists/nope.txt'), false);
+    assert.strictEqual(fs.existsSync(path.join(vfs.mountPoint, 'exists.txt')), true);
+    assert.strictEqual(fs.existsSync(path.join(vfs.mountPoint, 'nope.txt')), false);
   });
 
   it('fs.statSync returns stats for VFS files', () => {
     vfs = create();
     vfs.writeFileSync('/stat.txt', 'data');
-    vfs.mount('/vfs-test-sync-stat');
+    vfs.mount();
 
-    const stats = fs.statSync('/vfs-test-sync-stat/stat.txt');
+    const stats = fs.statSync(path.join(vfs.mountPoint, 'stat.txt'));
     assert.ok(stats.isFile());
   });
 
   it('fs.lstatSync returns stats for VFS files', () => {
     vfs = create();
     vfs.writeFileSync('/lstat.txt', 'data');
-    vfs.mount('/vfs-test-sync-lstat');
+    vfs.mount();
 
-    const stats = fs.lstatSync('/vfs-test-sync-lstat/lstat.txt');
+    const stats = fs.lstatSync(path.join(vfs.mountPoint, 'lstat.txt'));
     assert.ok(stats.isFile());
   });
 
@@ -59,34 +60,34 @@ describe('Module hooks — fs sync patches', () => {
     vfs = create();
     vfs.writeFileSync('/dir/a.txt', 'a');
     vfs.writeFileSync('/dir/b.txt', 'b');
-    vfs.mount('/vfs-test-sync-readdir');
+    vfs.mount();
 
-    const entries = fs.readdirSync('/vfs-test-sync-readdir/dir');
+    const entries = fs.readdirSync(path.join(vfs.mountPoint, 'dir'));
     assert.deepStrictEqual(entries.sort(), ['a.txt', 'b.txt']);
   });
 
   it('fs.realpathSync resolves VFS paths', () => {
     vfs = create();
     vfs.writeFileSync('/real.txt', 'data');
-    vfs.mount('/vfs-test-sync-realpath');
+    vfs.mount();
 
-    const resolved = fs.realpathSync('/vfs-test-sync-realpath/real.txt');
-    assert.strictEqual(resolved, '/vfs-test-sync-realpath/real.txt');
+    const resolved = fs.realpathSync(path.join(vfs.mountPoint, 'real.txt'));
+    assert.strictEqual(resolved, path.join(vfs.mountPoint, 'real.txt'));
   });
 
   it('fs.accessSync does not throw for existing VFS files', () => {
     vfs = create();
     vfs.writeFileSync('/access.txt', 'data');
-    vfs.mount('/vfs-test-sync-access');
+    vfs.mount();
 
-    assert.doesNotThrow(() => fs.accessSync('/vfs-test-sync-access/access.txt'));
+    assert.doesNotThrow(() => fs.accessSync(path.join(vfs.mountPoint, 'access.txt')));
   });
 
   it('fs.accessSync throws ENOENT for missing VFS files', () => {
     vfs = create();
-    vfs.mount('/vfs-test-sync-access-miss');
+    vfs.mount();
 
-    assert.throws(() => fs.accessSync('/vfs-test-sync-access-miss/nope.txt'), {
+    assert.throws(() => fs.accessSync(path.join(vfs.mountPoint, 'nope.txt')), {
       code: 'ENOENT',
     });
   });
@@ -95,10 +96,10 @@ describe('Module hooks — fs sync patches', () => {
     vfs = create();
     vfs.writeFileSync('/link-target.txt', 'data');
     vfs.symlinkSync('/link-target.txt', '/my-link.txt');
-    vfs.mount('/vfs-test-sync-readlink');
+    vfs.mount();
 
-    const target = fs.readlinkSync('/vfs-test-sync-readlink/my-link.txt');
-    assert.strictEqual(target, '/vfs-test-sync-readlink/link-target.txt');
+    const target = fs.readlinkSync(path.join(vfs.mountPoint, 'my-link.txt'));
+    assert.strictEqual(target, '/link-target.txt');
   });
 });
 
@@ -114,9 +115,9 @@ describe('Module hooks — fs.access callback', () => {
   it('fs.access calls back without error for existing VFS files', (_, done) => {
     vfs = create();
     vfs.writeFileSync('/cb.txt', 'data');
-    vfs.mount('/vfs-test-cb-access');
+    vfs.mount();
 
-    fs.access('/vfs-test-cb-access/cb.txt', (err) => {
+    fs.access(path.join(vfs.mountPoint, 'cb.txt'), (err) => {
       assert.ifError(err);
       done();
     });
@@ -124,9 +125,9 @@ describe('Module hooks — fs.access callback', () => {
 
   it('fs.access calls back with ENOENT for missing VFS files', (_, done) => {
     vfs = create();
-    vfs.mount('/vfs-test-cb-access-miss');
+    vfs.mount();
 
-    fs.access('/vfs-test-cb-access-miss/nope.txt', (err) => {
+    fs.access(path.join(vfs.mountPoint, 'nope.txt'), (err) => {
       assert.ok(err);
       assert.strictEqual(err.code, 'ENOENT');
       done();
@@ -146,9 +147,9 @@ describe('Module hooks — fs callback patches', () => {
   it('fs.stat calls back with stats for VFS files', (_, done) => {
     vfs = create();
     vfs.writeFileSync('/cb-stat.txt', 'data');
-    vfs.mount('/vfs-test-cb-stat');
+    vfs.mount();
 
-    fs.stat('/vfs-test-cb-stat/cb-stat.txt', (err, stats) => {
+    fs.stat(path.join(vfs.mountPoint, 'cb-stat.txt'), (err, stats) => {
       assert.ifError(err);
       assert.ok(stats.isFile());
       done();
@@ -157,9 +158,9 @@ describe('Module hooks — fs callback patches', () => {
 
   it('fs.stat calls back with ENOENT for missing VFS files', (_, done) => {
     vfs = create();
-    vfs.mount('/vfs-test-cb-stat-miss');
+    vfs.mount();
 
-    fs.stat('/vfs-test-cb-stat-miss/nope.txt', (err) => {
+    fs.stat(path.join(vfs.mountPoint, 'nope.txt'), (err) => {
       assert.ok(err);
       assert.strictEqual(err.code, 'ENOENT');
       done();
@@ -169,9 +170,9 @@ describe('Module hooks — fs callback patches', () => {
   it('fs.lstat calls back with stats for VFS files', (_, done) => {
     vfs = create();
     vfs.writeFileSync('/cb-lstat.txt', 'data');
-    vfs.mount('/vfs-test-cb-lstat');
+    vfs.mount();
 
-    fs.lstat('/vfs-test-cb-lstat/cb-lstat.txt', (err, stats) => {
+    fs.lstat(path.join(vfs.mountPoint, 'cb-lstat.txt'), (err, stats) => {
       assert.ifError(err);
       assert.ok(stats.isFile());
       done();
@@ -181,9 +182,9 @@ describe('Module hooks — fs callback patches', () => {
   it('fs.readFile calls back with VFS content', (_, done) => {
     vfs = create();
     vfs.writeFileSync('/cb-read.txt', 'callback content');
-    vfs.mount('/vfs-test-cb-readfile');
+    vfs.mount();
 
-    fs.readFile('/vfs-test-cb-readfile/cb-read.txt', 'utf8', (err, content) => {
+    fs.readFile(path.join(vfs.mountPoint, 'cb-read.txt'), 'utf8', (err, content) => {
       assert.ifError(err);
       assert.strictEqual(content, 'callback content');
       done();
@@ -192,9 +193,9 @@ describe('Module hooks — fs callback patches', () => {
 
   it('fs.readFile calls back with ENOENT for missing VFS files', (_, done) => {
     vfs = create();
-    vfs.mount('/vfs-test-cb-readfile-miss');
+    vfs.mount();
 
-    fs.readFile('/vfs-test-cb-readfile-miss/nope.txt', 'utf8', (err) => {
+    fs.readFile(path.join(vfs.mountPoint, 'nope.txt'), 'utf8', (err) => {
       assert.ok(err);
       assert.strictEqual(err.code, 'ENOENT');
       done();
@@ -205,9 +206,9 @@ describe('Module hooks — fs callback patches', () => {
     vfs = create();
     vfs.writeFileSync('/cbdir/a.txt', 'a');
     vfs.writeFileSync('/cbdir/b.txt', 'b');
-    vfs.mount('/vfs-test-cb-readdir');
+    vfs.mount();
 
-    fs.readdir('/vfs-test-cb-readdir/cbdir', (err, entries) => {
+    fs.readdir(path.join(vfs.mountPoint, 'cbdir'), (err, entries) => {
       assert.ifError(err);
       assert.deepStrictEqual(entries.sort(), ['a.txt', 'b.txt']);
       done();
@@ -218,11 +219,11 @@ describe('Module hooks — fs callback patches', () => {
     vfs = create();
     vfs.writeFileSync('/cb-link-target.txt', 'data');
     vfs.symlinkSync('/cb-link-target.txt', '/cb-link.txt');
-    vfs.mount('/vfs-test-cb-readlink');
+    vfs.mount();
 
-    fs.readlink('/vfs-test-cb-readlink/cb-link.txt', (err, target) => {
+    fs.readlink(path.join(vfs.mountPoint, 'cb-link.txt'), (err, target) => {
       assert.ifError(err);
-      assert.strictEqual(target, '/vfs-test-cb-readlink/cb-link-target.txt');
+      assert.strictEqual(target, '/cb-link-target.txt');
       done();
     });
   });
@@ -230,11 +231,11 @@ describe('Module hooks — fs callback patches', () => {
   it('fs.realpath calls back with resolved VFS path', (_, done) => {
     vfs = create();
     vfs.writeFileSync('/cb-real.txt', 'data');
-    vfs.mount('/vfs-test-cb-realpath');
+    vfs.mount();
 
-    fs.realpath('/vfs-test-cb-realpath/cb-real.txt', (err, resolved) => {
+    fs.realpath(path.join(vfs.mountPoint, 'cb-real.txt'), (err, resolved) => {
       assert.ifError(err);
-      assert.strictEqual(resolved, '/vfs-test-cb-realpath/cb-real.txt');
+      assert.strictEqual(resolved, path.join(vfs.mountPoint, 'cb-real.txt'));
       done();
     });
   });
@@ -242,10 +243,10 @@ describe('Module hooks — fs callback patches', () => {
   it('fs.createReadStream returns a readable stream for VFS files', (_, done) => {
     vfs = create();
     vfs.writeFileSync('/stream.txt', 'streamed data');
-    vfs.mount('/vfs-test-cb-stream');
+    vfs.mount();
 
     const chunks = [];
-    const stream = fs.createReadStream('/vfs-test-cb-stream/stream.txt');
+    const stream = fs.createReadStream(path.join(vfs.mountPoint, 'stream.txt'));
     stream.on('data', (chunk) => chunks.push(chunk));
     stream.on('end', () => {
       assert.strictEqual(Buffer.concat(chunks).toString(), 'streamed data');
@@ -267,16 +268,16 @@ describe('Module hooks — fs.promises patches', () => {
   it('fs.promises.access resolves for existing VFS files', async () => {
     vfs = create();
     vfs.writeFileSync('/paccess.txt', 'data');
-    vfs.mount('/vfs-test-p-access');
+    vfs.mount();
 
-    await assert.doesNotReject(fsp.access('/vfs-test-p-access/paccess.txt'));
+    await assert.doesNotReject(fsp.access(path.join(vfs.mountPoint, 'paccess.txt')));
   });
 
   it('fs.promises.access rejects with ENOENT for missing VFS files', async () => {
     vfs = create();
-    vfs.mount('/vfs-test-p-access-miss');
+    vfs.mount();
 
-    await assert.rejects(fsp.access('/vfs-test-p-access-miss/nope.txt'), {
+    await assert.rejects(fsp.access(path.join(vfs.mountPoint, 'nope.txt')), {
       code: 'ENOENT',
     });
   });
@@ -284,27 +285,27 @@ describe('Module hooks — fs.promises patches', () => {
   it('fs.promises.readFile reads from VFS', async () => {
     vfs = create();
     vfs.writeFileSync('/pread.txt', 'async vfs content');
-    vfs.mount('/vfs-test-p-readfile');
+    vfs.mount();
 
-    const content = await fsp.readFile('/vfs-test-p-readfile/pread.txt', 'utf8');
+    const content = await fsp.readFile(path.join(vfs.mountPoint, 'pread.txt'), 'utf8');
     assert.strictEqual(content, 'async vfs content');
   });
 
   it('fs.promises.stat returns stats for VFS files', async () => {
     vfs = create();
     vfs.writeFileSync('/pstat.txt', 'data');
-    vfs.mount('/vfs-test-p-stat');
+    vfs.mount();
 
-    const stats = await fsp.stat('/vfs-test-p-stat/pstat.txt');
+    const stats = await fsp.stat(path.join(vfs.mountPoint, 'pstat.txt'));
     assert.ok(stats.isFile());
   });
 
   it('fs.promises.lstat returns stats for VFS files', async () => {
     vfs = create();
     vfs.writeFileSync('/plstat.txt', 'data');
-    vfs.mount('/vfs-test-p-lstat');
+    vfs.mount();
 
-    const stats = await fsp.lstat('/vfs-test-p-lstat/plstat.txt');
+    const stats = await fsp.lstat(path.join(vfs.mountPoint, 'plstat.txt'));
     assert.ok(stats.isFile());
   });
 
@@ -312,9 +313,9 @@ describe('Module hooks — fs.promises patches', () => {
     vfs = create();
     vfs.writeFileSync('/pdir/x.txt', 'x');
     vfs.writeFileSync('/pdir/y.txt', 'y');
-    vfs.mount('/vfs-test-p-readdir');
+    vfs.mount();
 
-    const entries = await fsp.readdir('/vfs-test-p-readdir/pdir');
+    const entries = await fsp.readdir(path.join(vfs.mountPoint, 'pdir'));
     assert.deepStrictEqual(entries.sort(), ['x.txt', 'y.txt']);
   });
 
@@ -322,29 +323,29 @@ describe('Module hooks — fs.promises patches', () => {
     vfs = create();
     vfs.writeFileSync('/plink-target.txt', 'data');
     vfs.symlinkSync('/plink-target.txt', '/plink.txt');
-    vfs.mount('/vfs-test-p-readlink');
+    vfs.mount();
 
-    const target = await fsp.readlink('/vfs-test-p-readlink/plink.txt');
-    assert.strictEqual(target, '/vfs-test-p-readlink/plink-target.txt');
+    const target = await fsp.readlink(path.join(vfs.mountPoint, 'plink.txt'));
+    assert.strictEqual(target, '/plink-target.txt');
   });
 
   it('fs.promises.realpath resolves VFS paths', async () => {
     vfs = create();
     vfs.writeFileSync('/prealpath.txt', 'data');
-    vfs.mount('/vfs-test-p-realpath');
+    vfs.mount();
 
-    const resolved = await fsp.realpath('/vfs-test-p-realpath/prealpath.txt');
-    assert.strictEqual(resolved, '/vfs-test-p-realpath/prealpath.txt');
+    const resolved = await fsp.realpath(path.join(vfs.mountPoint, 'prealpath.txt'));
+    assert.strictEqual(resolved, path.join(vfs.mountPoint, 'prealpath.txt'));
   });
 
   it('require("fs/promises") returns the same patched object', async () => {
     vfs = create();
     vfs.writeFileSync('/shared.txt', 'shared content');
-    vfs.mount('/vfs-test-p-shared');
+    vfs.mount();
 
     // Both import paths should see VFS content
-    const content1 = await fs.promises.readFile('/vfs-test-p-shared/shared.txt', 'utf8');
-    const content2 = await fsp.readFile('/vfs-test-p-shared/shared.txt', 'utf8');
+    const content1 = await fs.promises.readFile(path.join(vfs.mountPoint, 'shared.txt'), 'utf8');
+    const content2 = await fsp.readFile(path.join(vfs.mountPoint, 'shared.txt'), 'utf8');
     assert.strictEqual(content1, 'shared content');
     assert.strictEqual(content2, 'shared content');
   });
@@ -362,9 +363,9 @@ describe('Module hooks — fd family patches', () => {
   it('fs.openSync + fs.readSync + fs.closeSync read a VFS file', () => {
     vfs = create();
     vfs.writeFileSync('/fd.txt', 'hello from vfs');
-    vfs.mount('/vfs-test-fd-sync');
+    vfs.mount();
 
-    const fd = fs.openSync('/vfs-test-fd-sync/fd.txt');
+    const fd = fs.openSync(path.join(vfs.mountPoint, 'fd.txt'));
     const buffer = Buffer.alloc(5);
     const bytesRead = fs.readSync(fd, buffer, 0, 5, 0);
     fs.closeSync(fd);
@@ -376,10 +377,10 @@ describe('Module hooks — fd family patches', () => {
   it('fs.openSync throws ENOENT for a missing VFS file', () => {
     vfs = create();
     vfs.writeFileSync('/present.txt', 'x');
-    vfs.mount('/vfs-test-fd-missing');
+    vfs.mount();
 
     assert.throws(
-      () => fs.openSync('/vfs-test-fd-missing/absent.txt'),
+      () => fs.openSync(path.join(vfs.mountPoint, 'absent.txt')),
       (err) => err.code === 'ENOENT',
     );
   });
@@ -387,9 +388,9 @@ describe('Module hooks — fd family patches', () => {
   it('fs.readSync accepts the options-object overload', () => {
     vfs = create();
     vfs.writeFileSync('/opts.txt', 'abcdefgh');
-    vfs.mount('/vfs-test-fd-opts');
+    vfs.mount();
 
-    const fd = fs.openSync('/vfs-test-fd-opts/opts.txt');
+    const fd = fs.openSync(path.join(vfs.mountPoint, 'opts.txt'));
     const buffer = Buffer.alloc(3);
     const bytesRead = fs.readSync(fd, buffer, { offset: 0, length: 3, position: 2 });
     fs.closeSync(fd);
@@ -401,9 +402,9 @@ describe('Module hooks — fd family patches', () => {
   it('fs.fstatSync returns stats for a VFS fd', () => {
     vfs = create();
     vfs.writeFileSync('/stat-fd.txt', 'data');
-    vfs.mount('/vfs-test-fd-fstat');
+    vfs.mount();
 
-    const fd = fs.openSync('/vfs-test-fd-fstat/stat-fd.txt');
+    const fd = fs.openSync(path.join(vfs.mountPoint, 'stat-fd.txt'));
     const stats = fs.fstatSync(fd);
     fs.closeSync(fd);
 
@@ -414,9 +415,9 @@ describe('Module hooks — fd family patches', () => {
   it('sequential fs.readSync calls advance the file position', () => {
     vfs = create();
     vfs.writeFileSync('/seq.txt', 'abcdef');
-    vfs.mount('/vfs-test-fd-seq');
+    vfs.mount();
 
-    const fd = fs.openSync('/vfs-test-fd-seq/seq.txt');
+    const fd = fs.openSync(path.join(vfs.mountPoint, 'seq.txt'));
     const first = Buffer.alloc(3);
     const second = Buffer.alloc(3);
     fs.readSync(fd, first, 0, 3, null);
@@ -430,9 +431,9 @@ describe('Module hooks — fd family patches', () => {
   it('fs.closeSync on a stale VFS fd throws EBADF', () => {
     vfs = create();
     vfs.writeFileSync('/stale.txt', 'x');
-    vfs.mount('/vfs-test-fd-stale');
+    vfs.mount();
 
-    const fd = fs.openSync('/vfs-test-fd-stale/stale.txt');
+    const fd = fs.openSync(path.join(vfs.mountPoint, 'stale.txt'));
     fs.closeSync(fd);
 
     assert.throws(() => fs.closeSync(fd), (err) => err.code === 'EBADF');
@@ -441,9 +442,9 @@ describe('Module hooks — fd family patches', () => {
   it('fs.open + fs.read + fs.close read a VFS file', (_t, done) => {
     vfs = create();
     vfs.writeFileSync('/cb.txt', 'callback content');
-    vfs.mount('/vfs-test-fd-cb');
+    vfs.mount();
 
-    fs.open('/vfs-test-fd-cb/cb.txt', 'r', (openErr, fd) => {
+    fs.open(path.join(vfs.mountPoint, 'cb.txt'), 'r', (openErr, fd) => {
       assert.ifError(openErr);
       const buffer = Buffer.alloc(8);
       fs.read(fd, buffer, 0, 8, 0, (readErr, bytesRead) => {
@@ -461,9 +462,9 @@ describe('Module hooks — fd family patches', () => {
   it('fs.fstat returns stats for a VFS fd', (_t, done) => {
     vfs = create();
     vfs.writeFileSync('/fstat-cb.txt', 'seven..');
-    vfs.mount('/vfs-test-fd-fstat-cb');
+    vfs.mount();
 
-    const fd = fs.openSync('/vfs-test-fd-fstat-cb/fstat-cb.txt');
+    const fd = fs.openSync(path.join(vfs.mountPoint, 'fstat-cb.txt'));
     fs.fstat(fd, (err, stats) => {
       assert.ifError(err);
       assert.ok(stats.isFile());
@@ -476,7 +477,7 @@ describe('Module hooks — fd family patches', () => {
   it('real-fs descriptors still work while a VFS is mounted', () => {
     vfs = create();
     vfs.writeFileSync('/unused.txt', 'x');
-    vfs.mount('/vfs-test-fd-passthrough');
+    vfs.mount();
 
     const fd = fs.openSync(__filename, 'r');
     const buffer = Buffer.alloc(12);
@@ -490,17 +491,17 @@ describe('Module hooks — fd family patches', () => {
   });
 
   it('an overlay mount leaves non-VFS paths on the real fs', () => {
-    vfs = create();
+    vfs = create({ overlay: true });
     vfs.writeFileSync('/only-here.txt', 'vfs');
-    vfs.mount('/vfs-test-fd-overlay', { overlay: true });
+    vfs.mount();
 
-    const fd = fs.openSync('/vfs-test-fd-overlay/only-here.txt');
+    const fd = fs.openSync(path.join(vfs.mountPoint, 'only-here.txt'));
     assert.strictEqual(fs.fstatSync(fd).size, 3);
     fs.closeSync(fd);
 
-    assert.throws(
-      () => fs.openSync('/vfs-test-fd-overlay/not-here.txt'),
-      (err) => err.code === 'ENOENT',
-    );
+    assert.strictEqual(vfs.shouldHandle(path.join(vfs.mountPoint, 'not-here.txt')), false);
+    const realFd = fs.openSync(__filename);
+    assert.ok(fs.fstatSync(realFd).size > 0);
+    fs.closeSync(realFd);
   });
 });

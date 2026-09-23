@@ -65,12 +65,24 @@ test('fd operations', () => {
   const vfs = create();
   expect(vfs.openSync('/file')).type.toBe<number>();
   expect(vfs.fstatSync(3)).type.toBe<VirtualStats>();
+  expect(vfs.ftruncateSync(3)).type.toBe<void>();
+});
+
+test('additional fs operations', () => {
+  const vfs = create();
+  expect(vfs.rmSync('/tree', { recursive: true })).type.toBe<void>();
+  expect(vfs.mkdtempSync('/tmp-')).type.toBe<string>();
+  expect(vfs.promises.rm('/tree', { force: true })).type.toBe<Promise<void>>();
+  expect(vfs.promises.truncate('/file')).type.toBe<Promise<void>>();
+  expect(vfs.promises.mkdtemp('/tmp-')).type.toBe<Promise<string>>();
 });
 
 // mount / unmount
-test('mount returns this', () => {
+test('mount returns a path and accepts no prefix', () => {
   const vfs = create();
-  expect(vfs.mount('/mnt')).type.toBe<VirtualFileSystem>();
+  expect(vfs.mount()).type.toBe<string>();
+  expect(vfs.mountPointURL).type.toBe<string | null>();
+  expect(vfs.mount).type.toBe<() => string>();
 });
 
 test('unmount returns void', () => {
