@@ -349,3 +349,158 @@ describe('Module hooks — fs.promises patches', () => {
     assert.strictEqual(content2, 'shared content');
   });
 });
+
+describe('Module hooks — fd family patches', () => {
+  let vfs;
+
+  afterEach(() => {
+    if (vfs?.mounted) {
+      vfs.unmount();
+    }
+  });
+
+  it('fs.openSync + fs.readSync + fs.closeSync read a VFS file', () => {
+    vfs = create();
+    vfs.writeFileSync('/fd.txt', 'hello from vfs');
+    vfs.mount('/vfs-test-fd-sync');
+
+    const fd = fs.openSync('/vfs-test-fd-sync/fd.txt');
+    const buffer = Buffer.alloc(5);
+    const bytesRead = fs.readSync(fd, buffer, 0, 5, 0);
+    fs.closeSync(fd);
+
+    assert.strictEqual(bytesRead, 5);
+    assert.strictEqual(buffer.toString(), 'hello');
+  });
+
+  it('fs.openSync throws ENOENT for a missing VFS file', () => {
+    vfs = create();
+    vfs.writeFileSync('/present.txt', 'x');
+    vfs.mount('/vfs-test-fd-missing');
+
+    assert.throws(
+      () => fs.openSync('/vfs-test-fd-missing/absent.txt'),
+      (err) => err.code === 'ENOENT',
+    );
+  });
+
+  it('fs.readSync accepts the options-object overload', () => {
+    vfs = create();
+    vfs.writeFileSync('/opts.txt', 'abcdefgh');
+    vfs.mount('/vfs-test-fd-opts');
+
+    const fd = fs.openSync('/vfs-test-fd-opts/opts.txt');
+    const buffer = Buffer.alloc(3);
+    const bytesRead = fs.readSync(fd, buffer, { offset: 0, length: 3, position: 2 });
+    fs.closeSync(fd);
+
+    assert.strictEqual(bytesRead, 3);
+    assert.strictEqual(buffer.toString(), 'cde');
+  });
+
+  it('fs.fstatSync returns stats for a VFS fd', () => {
+    vfs = create();
+    vfs.writeFileSync('/stat-fd.txt', 'data');
+    vfs.mount('/vfs-test-fd-fstat');
+
+    const fd = fs.openSync('/vfs-test-fd-fstat/stat-fd.txt');
+    const stats = fs.fstatSync(fd);
+    fs.closeSync(fd);
+
+    assert.ok(stats.isFile());
+    assert.strictEqual(stats.size, 4);
+  });
+
+  it('sequential fs.readSync calls advance the file position', () => {
+    vfs = create();
+    vfs.writeFileSync('/seq.txt', 'abcdef');
+    vfs.mount('/vfs-test-fd-seq');
+
+    const fd = fs.openSync('/vfs-test-fd-seq/seq.txt');
+    const first = Buffer.alloc(3);
+    const second = Buffer.alloc(3);
+    fs.readSync(fd, first, 0, 3, null);
+    fs.readSync(fd, second, 0, 3, null);
+    fs.closeSync(fd);
+
+    assert.strictEqual(first.toString(), 'abc');
+    assert.strictEqual(second.toString(), 'def');
+  });
+
+  it('fs.closeSync on a stale VFS fd throws EBADF', () => {
+    vfs = create();
+    vfs.writeFileSync('/stale.txt', 'x');
+    vfs.mount('/vfs-test-fd-stale');
+
+    const fd = fs.openSync('/vfs-test-fd-stale/stale.txt');
+    fs.closeSync(fd);
+
+    assert.throws(() => fs.closeSync(fd), (err) => err.code === 'EBADF');
+  });
+
+  it('fs.open + fs.read + fs.close read a VFS file', (_t, done) => {
+    vfs = create();
+    vfs.writeFileSync('/cb.txt', 'callback content');
+    vfs.mount('/vfs-test-fd-cb');
+
+    fs.open('/vfs-test-fd-cb/cb.txt', 'r', (openErr, fd) => {
+      assert.ifError(openErr);
+      const buffer = Buffer.alloc(8);
+      fs.read(fd, buffer, 0, 8, 0, (readErr, bytesRead) => {
+        assert.ifError(readErr);
+        assert.strictEqual(bytesRead, 8);
+        assert.strictEqual(buffer.toString(), 'callback');
+        fs.close(fd, (closeErr) => {
+          assert.ifError(closeErr);
+          done();
+        });
+      });
+    });
+  });
+
+  it('fs.fstat returns stats for a VFS fd', (_t, done) => {
+    vfs = create();
+    vfs.writeFileSync('/fstat-cb.txt', 'seven..');
+    vfs.mount('/vfs-test-fd-fstat-cb');
+
+    const fd = fs.openSync('/vfs-test-fd-fstat-cb/fstat-cb.txt');
+    fs.fstat(fd, (err, stats) => {
+      assert.ifError(err);
+      assert.ok(stats.isFile());
+      assert.strictEqual(stats.size, 7);
+      fs.closeSync(fd);
+      done();
+    });
+  });
+
+  it('real-fs descriptors still work while a VFS is mounted', () => {
+    vfs = create();
+    vfs.writeFileSync('/unused.txt', 'x');
+    vfs.mount('/vfs-test-fd-passthrough');
+
+    const fd = fs.openSync(__filename, 'r');
+    const buffer = Buffer.alloc(12);
+    const bytesRead = fs.readSync(fd, buffer, 0, 12, 0);
+    const stats = fs.fstatSync(fd);
+    fs.closeSync(fd);
+
+    assert.strictEqual(bytesRead, 12);
+    assert.strictEqual(buffer.toString(), "'use strict'");
+    assert.ok(stats.size > 0);
+  });
+
+  it('an overlay mount leaves non-VFS paths on the real fs', () => {
+    vfs = create();
+    vfs.writeFileSync('/only-here.txt', 'vfs');
+    vfs.mount('/vfs-test-fd-overlay', { overlay: true });
+
+    const fd = fs.openSync('/vfs-test-fd-overlay/only-here.txt');
+    assert.strictEqual(fs.fstatSync(fd).size, 3);
+    fs.closeSync(fd);
+
+    assert.throws(
+      () => fs.openSync('/vfs-test-fd-overlay/not-here.txt'),
+      (err) => err.code === 'ENOENT',
+    );
+  });
+});
