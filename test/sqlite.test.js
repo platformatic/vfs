@@ -738,12 +738,11 @@ describe('SqliteProvider - require/import with module hooks', () => {
       '/node_modules/sqlite-test-mod/package.json',
       '{"name":"sqlite-test-mod","main":"index.js"}',
     );
-    vfs.mount('/');
+    vfs.mount();
     try {
       const mod = require('sqlite-test-mod');
       assert.deepStrictEqual(mod, { answer: 42 });
     } finally {
-      delete require.cache['/node_modules/sqlite-test-mod/index.js'];
       vfs.unmount();
       provider.close();
     }
@@ -760,12 +759,11 @@ describe('SqliteProvider - require/import with module hooks', () => {
       '/node_modules/sqlite-test-json/package.json',
       '{"name":"sqlite-test-json","main":"data.json"}',
     );
-    vfs.mount('/');
+    vfs.mount();
     try {
       const mod = require('sqlite-test-json');
       assert.deepStrictEqual(mod, { hello: 'world' });
     } finally {
-      delete require.cache['/node_modules/sqlite-test-json/data.json'];
       vfs.unmount();
       provider.close();
     }

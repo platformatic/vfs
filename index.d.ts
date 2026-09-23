@@ -38,6 +38,7 @@ export interface ReadStreamOptions {
 
 export interface StatOptions {
   bigint?: boolean;
+  throwIfNoEntry?: boolean;
 }
 
 export class VirtualStats {
@@ -107,8 +108,10 @@ export class VFSWatchAsyncIterable implements AsyncIterable<WatchAsyncEvent> {
 }
 
 export class VFSStatWatcher extends EventEmitter {
-  addListener(listener: (curr: VirtualStats, prev: VirtualStats) => void): void;
+  addListener(listener: (curr: VirtualStats, prev: VirtualStats) => void): this;
+  addListener(eventName: string | symbol, listener: (...args: any[]) => void): this;
   removeListener(listener: (curr: VirtualStats, prev: VirtualStats) => void): boolean;
+  removeListener(eventName: string | symbol, listener: (...args: any[]) => void): this;
   hasNoListeners(): boolean;
   stop(): void;
   unref(): this;
@@ -128,6 +131,9 @@ export interface VFSPromisesAPI {
   readdir(dirPath: string, options?: ReaddirOptions): Promise<string[] | VirtualDirent[]>;
   mkdir(dirPath: string, options?: MkdirOptions): Promise<string | undefined>;
   rmdir(dirPath: string): Promise<void>;
+  rm(filePath: string, options?: { recursive?: boolean; force?: boolean }): Promise<void>;
+  truncate(filePath: string, len?: number): Promise<void>;
+  mkdtemp(prefix: string): Promise<string>;
   unlink(filePath: string): Promise<void>;
   rename(oldPath: string, newPath: string): Promise<void>;
   copyFile(src: string, dest: string, mode?: number): Promise<void>;
@@ -148,6 +154,7 @@ export class VirtualFileSystem {
 
   get provider(): VirtualProvider;
   get mountPoint(): string | null;
+  get mountPointURL(): string | null;
   get mounted(): boolean;
   get readonly(): boolean;
   get overlay(): boolean;
@@ -159,7 +166,7 @@ export class VirtualFileSystem {
   resolvePath(inputPath: string): string;
 
   // Mount
-  mount(prefix: string): this;
+  mount(): string;
   unmount(): void;
   [Symbol.dispose](): void;
 
@@ -186,6 +193,10 @@ export class VirtualFileSystem {
   readlinkSync(linkPath: string, options?: { encoding?: BufferEncoding }): string;
   symlinkSync(target: string, path: string, type?: string): void;
   accessSync(filePath: string, mode?: number): void;
+  rmSync(filePath: string, options?: { recursive?: boolean; force?: boolean }): void;
+  truncateSync(filePath: string, len?: number): void;
+  ftruncateSync(fd: number, len?: number): void;
+  mkdtempSync(prefix: string): string;
 
   // File descriptor operations
   openSync(filePath: string, flags?: string, mode?: number): number;
@@ -219,6 +230,11 @@ export class VirtualFileSystem {
   read(fd: number, buffer: Buffer, offset: number, length: number, position: number | null, callback: (err: NodeJS.ErrnoException | null, bytesRead: number, buffer: Buffer) => void): void;
   fstat(fd: number, callback: Callback<VirtualStats>): void;
   fstat(fd: number, options: StatOptions, callback: Callback<VirtualStats>): void;
+  rm(filePath: string, callback: Callback): void;
+  rm(filePath: string, options: { recursive?: boolean; force?: boolean }, callback: Callback): void;
+  truncate(filePath: string, callback: Callback): void;
+  truncate(filePath: string, len: number, callback: Callback): void;
+  mkdtemp(prefix: string, callback: Callback<string>): void;
 
   // Stream operations
   createReadStream(filePath: string, options?: ReadStreamOptions): VirtualReadStream;
