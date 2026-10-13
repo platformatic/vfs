@@ -24,8 +24,8 @@ importers:
         specifier: ^12.0.0
         version: 12.0.0
       cleaner-spec-reporter:
-        specifier: ^1.0.3
-        version: 1.0.3
+        specifier: ^2.0.0
+        version: 2.0.1
       eslint:
         specifier: ^10.0.2
         version: 10.12.0(supports-color@7.2.0)
@@ -199,8 +199,8 @@ packages:
   cacheable@2.5.0:
     resolution: {integrity: sha512-60cyAOytib/OzBw1JNSoSV/boK1AtHryDIjvVBk7XbN4ugfkM3+Sry7fEjNgPMGgOjuaZPAp8ruZ0Cxafwyq9g==}
 
-  cleaner-spec-reporter@1.0.3:
-    resolution: {integrity: sha512-LgsmrqWRVLcfpyom+A50ukifqg0To+G3UJwKLg/C9r+flm+3MZQQe2MpX4T1fRhMV9VPe+8JuTkGU2gp375G2A==}
+  cleaner-spec-reporter@2.0.1:
+    resolution: {integrity: sha512-ayqqK85LkMwAZIRnL0WiLG8HU5gjmq9XNKpUK4F8xE1ydnJM/E6qbaYflOyhSUmxleC0wFJnzCHE8VNh5npnIA==}
     engines: {node: '>= 22.21.0'}
 
   cliui@9.0.1:
@@ -701,7 +701,7 @@ snapshots:
       keyv: 5.6.0
       qified: 0.10.1
 
-  cleaner-spec-reporter@1.0.3: {}
+  cleaner-spec-reporter@2.0.1: {}
 
   cliui@9.0.1:
     dependencies:
